@@ -1,5 +1,9 @@
 use rum::{rumdecoder, rumload, states::State};
 use std::env;
+extern crate jemallocator;
+
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 fn main() {
     let input = env::args().nth(1);
