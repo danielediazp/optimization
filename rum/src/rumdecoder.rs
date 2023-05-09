@@ -105,11 +105,15 @@ fn get(field: &Field, instruction: Umi) -> u32 {
 /// # Argument:
 /// * `state`: The struct representing the state of the UM.
 fn decode_inst(state: &mut State) {
-    let inst = state.get_instruction();
+    let inst = unsafe { state.get_instruction() };
     match get(&OP, inst).into() {
         Opcode::CMov => state.cmov(get(&RA, inst), get(&RB, inst), get(&RC, inst)),
-        Opcode::SegLoad => state.seg_load(get(&RA, inst), get(&RB, inst), get(&RC, inst)),
-        Opcode::SegStore => state.seg_store(get(&RA, inst), get(&RB, inst), get(&RC, inst)),
+        Opcode::SegLoad => unsafe {
+            state.seg_load(get(&RA, inst), get(&RB, inst), get(&RC, inst))
+        },
+        Opcode::SegStore => unsafe {
+            state.seg_store(get(&RA, inst), get(&RB, inst), get(&RC, inst))
+        },
         Opcode::Add => state.add(get(&RA, inst), get(&RB, inst), get(&RC, inst)),
         Opcode::Mul => state.mul(get(&RA, inst), get(&RB, inst), get(&RC, inst)),
         Opcode::Div => state.div(get(&RA, inst), get(&RB, inst), get(&RC, inst)),
@@ -119,7 +123,7 @@ fn decode_inst(state: &mut State) {
         Opcode::UnmapSeg => state.unmap_seg(get(&RC, inst)),
         Opcode::Output => state.output(get(&RC, inst)),
         Opcode::Input => state.input(get(&RC, inst)),
-        Opcode::LoadProg => state.load_prog(get(&RB, inst), get(&RC, inst)),
-        Opcode::LoadVal => state.load_val(get(&RL, inst), get(&VL, inst)),
+        Opcode::LoadProg => unsafe { state.load_prog(get(&RB, inst), get(&RC, inst)) },
+        Opcode::LoadVal => unsafe { state.load_val(get(&RL, inst), get(&VL, inst)) },
     }
 }

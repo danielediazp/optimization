@@ -37,13 +37,13 @@ impl State {
     /// Gets the instruction that should be decoded at the current point in time in the UM.
     /// After the instruction is extracted, the program counter is to the next instruction id.
     /// Returns the instruction as a code word represented as u32.
-    pub fn get_instruction(&mut self) -> u32 {
-        let inst = self.allocated_memory.get(0).unwrap().get(self.prog_counter);
+    pub unsafe fn get_instruction(&mut self) -> u32 {
+        let inst = self
+            .allocated_memory
+            .get_unchecked(0)
+            .get_unchecked(self.prog_counter);
         self.prog_counter += 1;
-        match inst {
-            Some(instruction) => return *instruction,
-            None => panic!("Program Counter points outside the bounds of m[0]"),
-        }
+        return *inst;
     }
 
     /// This functions represents a Conditional Move, which the UM identifies as Opcode 0.
@@ -73,14 +73,11 @@ impl State {
     /// * `b`: The index of the register at position B.
     /// * `c`: The index of the register at position C.
     /// * `state`: The struct representing the current state of the UM.
-    pub fn seg_load(&mut self, a: u32, b: u32, c: u32) {
-        self.registers[a as usize] = self
+    pub unsafe fn seg_load(&mut self, a: u32, b: u32, c: u32) {
+        self.registers[a as usize] = *self
             .allocated_memory
-            .get(self.registers[b as usize] as usize)
-            .unwrap()
-            .get(self.registers[c as usize] as usize)
-            .unwrap()
-            .clone()
+            .get_unchecked(self.registers[b as usize] as usize)
+            .get_unchecked(self.registers[c as usize] as usize)
     }
 
     /// Stores the value of the register at position C inside the allocated memory at row as
@@ -93,14 +90,9 @@ impl State {
     /// * `b`: The index of the register at position B.
     /// * `c`: The index of the register at position C.
     /// * `state`: The struct representing the current state of the UM.
-    pub fn seg_store(&mut self, a: u32, b: u32, c: u32) {
-        if let Some(val_at_ab) = self
-            .allocated_memory
-            .get_mut(self.registers[a as usize] as usize)
-            .and_then(|inner_vec| inner_vec.get_mut(self.registers[b as usize] as usize))
-        {
-            *val_at_ab = self.registers[c as usize].clone()
-        }
+    pub unsafe fn seg_store(&mut self, a: u32, b: u32, c: u32) {
+        self.allocated_memory[self.registers[a as usize] as usize]
+            [self.registers[b as usize] as usize] = self.registers[c as usize]
     }
 
     /// Adds the value of the register at position B plus the value of the register at position C.
@@ -144,9 +136,6 @@ impl State {
     /// * `c`: The index of the register at position C.
     /// * `state`: The struct representing the current state of the UM.
     pub fn div(&mut self, a: u32, b: u32, c: u32) {
-        if self.registers[c as usize] == 0 {
-            panic!("Division by zero error!")
-        }
         self.registers[a as usize] =
             self.registers[b as usize].wrapping_div(self.registers[c as usize])
     }
@@ -203,9 +192,6 @@ impl State {
     /// * `state`: The struct representing the current state of the UM.
     pub fn unmap_seg(&mut self, c: u32) {
         let freed_location = self.registers[c as usize];
-        if freed_location == 0 {
-            panic!("m[0] cannot be unmapped, it is the executing instruction set!")
-        }
         self.allocated_memory[freed_location as usize].clear();
         self.freed_memory.push(freed_location)
     }
@@ -247,7 +233,7 @@ impl State {
     /// * `b`: The index of the register at position B.
     /// * `c`: The index of the register at position C.
     /// * `state`: The struct representing the current state of the UM.
-    pub fn load_prog(&mut self, b: u32, c: u32) {
+    pub unsafe fn load_prog(&mut self, b: u32, c: u32) {
         let location = self.registers[b as usize] as usize;
         if location == 0 {
             self.prog_counter = self.registers[c as usize] as usize;
@@ -265,7 +251,7 @@ impl State {
     /// * `location`: The register where the value should be stored.
     /// * `val`: The value to store.
     /// * `state`: The struct representing the current state of the UM.
-    pub fn load_val(&mut self, location: u32, val: u32) {
+    pub unsafe fn load_val(&mut self, location: u32, val: u32) {
         self.registers[location as usize] = val
     }
 }
